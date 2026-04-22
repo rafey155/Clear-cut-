@@ -192,7 +192,7 @@ const ImageUploader = () => {
                 <span className="w-2 h-2 rounded-full bg-primary"></span>
                 Background Removed
               </h4>
-              <div className="glass-panel rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center relative bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMWUyOTNiIi8+PHJlY3QgeD0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iIzBmMTcyeiIvPjxyZWN0IHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiMwZjE3MmEiLz48cmVjdCB4PSIxMCIgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iIzFlMjkzYiIvPjwvc3ZnPg==')]">
+              <div className="rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center relative checkerboard border border-slate-700/50 shadow-inner">
                 
                 {!processedImage && !isProcessing && (
                   <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
