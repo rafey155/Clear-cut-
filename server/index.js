@@ -15,9 +15,10 @@ app.use(cors());
 app.use(express.json());
 
 
-// Configure Multer for temporary storage
+// Configure Multer for memory storage (required for Vercel Serverless)
+const storage = multer.memoryStorage();
 const upload = multer({
-  dest: 'uploads/',
+  storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png' || file.mimetype === 'image/jpg') {
@@ -28,28 +29,33 @@ const upload = multer({
   }
 });
 
-// Create uploads folder if it doesn't exist
-const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
-
 app.post('/api/remove-background', upload.single('image'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No image uploaded' });
   }
 
-  const tempFilePath = req.file.path;
-
   try {
     // Credentials check is handled during server startup in config/cloudinary.js
 
-    // Upload to Cloudinary and request background removal
+    // Upload to Cloudinary directly from memory buffer
     // Note: The Cloudinary AI Background Removal add-on must be enabled in your Cloudinary account.
-    const result = await cloudinary.uploader.upload(tempFilePath, {
-      background_removal: "cloudinary_ai",
-      resource_type: 'image'
-    });
+    const uploadStream = () => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            background_removal: "cloudinary_ai",
+            resource_type: 'image'
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(req.file.buffer);
+      });
+    };
+
+    const result = await uploadStream();
 
     // We must wait for the background removal to complete since it's processed asynchronously by Cloudinary in some cases.
     // However, for immediate response, using remove.bg API or similar might be more direct if Cloudinary's async processing takes too long.
@@ -72,11 +78,6 @@ app.post('/api/remove-background', upload.single('image'), async (req, res) => {
   } catch (error) {
     console.error('Error processing image:', error);
     res.status(500).json({ error: error.message || 'Failed to process image' });
-  } finally {
-    // Delete the temporary file
-    if (fs.existsSync(tempFilePath)) {
-      fs.unlinkSync(tempFilePath);
-    }
   }
 });
 
