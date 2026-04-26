@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, Image as ImageIcon, X, Download, Loader2 } from 'lucide-react';
 
 const ImageUploader = () => {
@@ -8,6 +8,66 @@ const ImageUploader = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedBgColor, setSelectedBgColor] = useState('transparent');
+  const [customBgImage, setCustomBgImage] = useState(null);
+  const [mergedImage, setMergedImage] = useState(null);
+
+  useEffect(() => {
+    if (!processedImage) {
+      setMergedImage(null);
+      return;
+    }
+
+    const generateMergedImage = async () => {
+      if (selectedBgColor === 'transparent' && !customBgImage) {
+        setMergedImage(processedImage);
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      const fgImg = new window.Image();
+      fgImg.crossOrigin = 'anonymous';
+      fgImg.src = processedImage;
+      
+      try {
+        await new Promise((resolve, reject) => {
+          fgImg.onload = resolve;
+          fgImg.onerror = reject;
+        });
+
+        canvas.width = fgImg.width;
+        canvas.height = fgImg.height;
+
+        if (customBgImage) {
+          const bgImg = new window.Image();
+          bgImg.crossOrigin = 'anonymous';
+          bgImg.src = customBgImage;
+          await new Promise((resolve, reject) => {
+            bgImg.onload = resolve;
+            bgImg.onerror = reject;
+          });
+          
+          const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
+          const x = (canvas.width / 2) - (bgImg.width / 2) * scale;
+          const y = (canvas.height / 2) - (bgImg.height / 2) * scale;
+          ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
+        } else if (selectedBgColor && selectedBgColor !== 'transparent') {
+          ctx.fillStyle = selectedBgColor;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        ctx.drawImage(fgImg, 0, 0);
+        setMergedImage(canvas.toDataURL('image/png'));
+      } catch (err) {
+        console.error("Error generating merged image:", err);
+        setMergedImage(processedImage);
+      }
+    };
+
+    generateMergedImage();
+  }, [processedImage, selectedBgColor, customBgImage]);
 
   const handleFileChange = (selectedFile) => {
     setError(null);
@@ -78,18 +138,30 @@ const ImageUploader = () => {
   };
 
   const handleDownload = async () => {
-    if (!processedImage) return;
+    const imageToDownload = mergedImage || processedImage;
+    if (!imageToDownload) return;
     
     try {
-      const response = await fetch(processedImage);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      let url;
+      let isDataUrl = imageToDownload.startsWith('data:');
+      
+      if (isDataUrl) {
+        url = imageToDownload;
+      } else {
+        const response = await fetch(imageToDownload);
+        const blob = await response.blob();
+        url = window.URL.createObjectURL(blob);
+      }
+      
       const a = document.createElement('a');
       a.href = url;
       a.download = `clearcut-${Date.now()}.png`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      
+      if (!isDataUrl) {
+        window.URL.revokeObjectURL(url);
+      }
       document.body.removeChild(a);
     } catch (err) {
       setError('Failed to download image.');
@@ -101,6 +173,9 @@ const ImageUploader = () => {
     setPreview(null);
     setProcessedImage(null);
     setError(null);
+    setSelectedBgColor('transparent');
+    setCustomBgImage(null);
+    setMergedImage(null);
   };
 
   return (
@@ -214,11 +289,77 @@ const ImageUploader = () => {
                 )}
 
                 {processedImage && (
-                  <img src={processedImage} alt="Processed" className="max-w-full max-h-full object-contain animate-in fade-in duration-700" />
+                  <img src={mergedImage || processedImage} alt="Processed" className="max-w-full max-h-full object-contain animate-in fade-in duration-700" />
                 )}
               </div>
             </div>
           </div>
+
+          {/* Background Replacement Tools */}
+          {processedImage && (
+            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 animate-in slide-in-from-bottom-4 duration-500">
+              <h4 className="text-lg font-medium text-slate-300 mb-4 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+                Background Replacement
+              </h4>
+              
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Transparent option */}
+                <button
+                  onClick={() => { setSelectedBgColor('transparent'); setCustomBgImage(null); }}
+                  className={`w-10 h-10 rounded-full border-2 checkerboard flex items-center justify-center transition-all ${
+                    selectedBgColor === 'transparent' && !customBgImage ? 'border-primary scale-110 shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-slate-600 hover:border-slate-400'
+                  }`}
+                  title="Transparent Background"
+                />
+                
+                {/* Solid Colors */}
+                {[
+                  { name: 'White', color: '#FFFFFF' },
+                  { name: 'Black', color: '#000000' },
+                  { name: 'Blue', color: '#3B82F6' },
+                  { name: 'Red', color: '#EF4444' },
+                  { name: 'Green', color: '#22C55E' },
+                ].map((bg) => (
+                  <button
+                    key={bg.name}
+                    onClick={() => { setSelectedBgColor(bg.color); setCustomBgImage(null); }}
+                    className={`w-10 h-10 rounded-full border-2 transition-all ${
+                      selectedBgColor === bg.color && !customBgImage ? 'border-primary scale-110 shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-slate-600 hover:border-slate-400'
+                    }`}
+                    style={{ backgroundColor: bg.color }}
+                    title={`${bg.name} Background`}
+                  />
+                ))}
+                
+                {/* Custom Image Upload */}
+                <div className="ml-auto flex-shrink-0 mt-4 sm:mt-0 w-full sm:w-auto flex justify-end">
+                  <input
+                    type="file"
+                    id="custom-bg-upload"
+                    className="hidden"
+                    accept="image/png, image/jpeg, image/jpg"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setCustomBgImage(URL.createObjectURL(file));
+                        setSelectedBgColor(null);
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => document.getElementById('custom-bg-upload').click()}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border-2 ${
+                      customBgImage ? 'bg-primary/20 text-primary border-primary shadow-[0_0_15px_rgba(99,102,241,0.3)]' : 'bg-slate-700 text-white border-transparent hover:bg-slate-600'
+                    }`}
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    Custom Image
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Download Action */}
           {processedImage && (
