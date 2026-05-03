@@ -11,9 +11,15 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin: ['https://clear-cut-frontend.vercel.app', 'http://localhost:5173'],
+  methods: ['GET', 'POST']
+}));
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.json({ message: "Clear Cut API is running" });
+});
 
 // Configure Multer for memory storage (required for Vercel Serverless)
 const storage = multer.memoryStorage();
