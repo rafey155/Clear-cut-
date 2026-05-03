@@ -184,7 +184,7 @@ const ImageUploader = () => {
       {!preview && (
         <div
           className={`glass-panel rounded-3xl p-10 md:p-20 text-center cursor-pointer transition-all duration-300 ease-out border-2 border-dashed ${
-            isDragging ? 'border-primary bg-primary/10 scale-[1.02]' : 'border-slate-600 hover:border-primary/50 hover:bg-slate-800/80'
+            isDragging ? 'border-primary bg-primary/10 scale-[1.02]' : 'border-slate-300 dark:border-slate-600 hover:border-primary/50 hover:bg-slate-50 dark:hover:bg-slate-800/80'
           }`}
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
@@ -203,10 +203,10 @@ const ImageUploader = () => {
             <Upload className="w-10 h-10 text-primary" />
           </div>
           
-          <h3 className="text-2xl font-bold text-white mb-3">
+          <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-3 transition-colors">
             Drag & Drop your image here
           </h3>
-          <p className="text-slate-400 mb-6">
+          <p className="text-slate-500 dark:text-slate-400 mb-6 transition-colors">
             or click to browse from your device
           </p>
           
@@ -220,7 +220,7 @@ const ImageUploader = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="mt-6 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center gap-3">
+        <div className="mt-6 bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 p-4 rounded-xl flex items-center gap-3 transition-colors">
           <X className="w-5 h-5 flex-shrink-0" />
           <p>{error}</p>
         </div>
@@ -229,20 +229,20 @@ const ImageUploader = () => {
       {/* Preview Section */}
       {preview && (
         <div className="space-y-8 animate-in fade-in zoom-in duration-500">
-          <div className="flex justify-between items-center bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+          <div className="flex justify-between items-center bg-white/50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
             <div className="flex items-center gap-4">
-              <div className="bg-slate-700 p-3 rounded-xl">
+              <div className="bg-slate-100 dark:bg-slate-700 p-3 rounded-xl transition-colors duration-300">
                 <ImageIcon className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-white font-medium truncate max-w-[200px] sm:max-w-xs">{file.name}</p>
-                <p className="text-sm text-slate-400">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                <p className="text-slate-800 dark:text-white font-medium truncate max-w-[200px] sm:max-w-xs transition-colors">{file.name}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 transition-colors">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
               </div>
             </div>
             
             <button 
               onClick={clearSelection}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+              className="p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
               title="Clear selection"
             >
               <X className="w-5 h-5" />
@@ -252,8 +252,8 @@ const ImageUploader = () => {
           <div className="grid md:grid-cols-2 gap-8">
             {/* Original Image */}
             <div className="space-y-4">
-              <h4 className="text-lg font-medium text-slate-300 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-slate-500"></span>
+              <h4 className="text-lg font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2 transition-colors">
+                <span className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500 transition-colors"></span>
                 Original Image
               </h4>
               <div className="glass-panel rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center relative group">
@@ -263,15 +263,15 @@ const ImageUploader = () => {
 
             {/* Processed Image */}
             <div className="space-y-4">
-              <h4 className="text-lg font-medium text-slate-300 flex items-center gap-2">
+              <h4 className="text-lg font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2 transition-colors">
                 <span className="w-2 h-2 rounded-full bg-primary"></span>
                 Background Removed
               </h4>
-              <div className="rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center relative checkerboard border border-slate-700/50 shadow-inner">
+              <div className="rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center relative checkerboard border border-slate-200 dark:border-slate-700/50 shadow-inner transition-colors duration-300">
                 
                 {!processedImage && !isProcessing && (
-                  <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-                    <p className="text-slate-300 mb-6 max-w-sm">Ready to work magic on your image. Click the button below to remove the background.</p>
+                  <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center transition-colors duration-300">
+                    <p className="text-slate-700 dark:text-slate-300 mb-6 max-w-sm transition-colors">Ready to work magic on your image. Click the button below to remove the background.</p>
                     <button
                       onClick={processImage}
                       className="bg-primary hover:bg-secondary text-white px-8 py-3 rounded-xl font-medium transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] transform hover:-translate-y-1"
@@ -282,7 +282,7 @@ const ImageUploader = () => {
                 )}
 
                 {isProcessing && (
-                  <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-4">
+                  <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-4 transition-colors duration-300">
                     <Loader2 className="w-12 h-12 text-primary animate-spin" />
                     <p className="text-primary font-medium animate-pulse">Cutting out the background...</p>
                   </div>
@@ -297,8 +297,8 @@ const ImageUploader = () => {
 
           {/* Background Replacement Tools */}
           {processedImage && (
-            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 animate-in slide-in-from-bottom-4 duration-500">
-              <h4 className="text-lg font-medium text-slate-300 mb-4 flex items-center gap-2">
+            <div className="bg-white/50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50 animate-in slide-in-from-bottom-4 duration-500 transition-colors duration-300">
+              <h4 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2 transition-colors">
                 <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
                 Background Replacement
               </h4>
@@ -308,7 +308,7 @@ const ImageUploader = () => {
                 <button
                   onClick={() => { setSelectedBgColor('transparent'); setCustomBgImage(null); }}
                   className={`w-10 h-10 rounded-full border-2 checkerboard flex items-center justify-center transition-all ${
-                    selectedBgColor === 'transparent' && !customBgImage ? 'border-primary scale-110 shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-slate-600 hover:border-slate-400'
+                    selectedBgColor === 'transparent' && !customBgImage ? 'border-primary scale-110 shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-slate-300 hover:border-slate-400 dark:border-slate-600 dark:hover:border-slate-400'
                   }`}
                   title="Transparent Background"
                 />
@@ -325,7 +325,7 @@ const ImageUploader = () => {
                     key={bg.name}
                     onClick={() => { setSelectedBgColor(bg.color); setCustomBgImage(null); }}
                     className={`w-10 h-10 rounded-full border-2 transition-all ${
-                      selectedBgColor === bg.color && !customBgImage ? 'border-primary scale-110 shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-slate-600 hover:border-slate-400'
+                      selectedBgColor === bg.color && !customBgImage ? 'border-primary scale-110 shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-slate-300 hover:border-slate-400 dark:border-slate-600 dark:hover:border-slate-400'
                     }`}
                     style={{ backgroundColor: bg.color }}
                     title={`${bg.name} Background`}
@@ -350,7 +350,7 @@ const ImageUploader = () => {
                   <button
                     onClick={() => document.getElementById('custom-bg-upload').click()}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border-2 ${
-                      customBgImage ? 'bg-primary/20 text-primary border-primary shadow-[0_0_15px_rgba(99,102,241,0.3)]' : 'bg-slate-700 text-white border-transparent hover:bg-slate-600'
+                      customBgImage ? 'bg-primary/20 text-primary border-primary shadow-[0_0_15px_rgba(99,102,241,0.3)]' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white border-transparent hover:bg-slate-200 dark:hover:bg-slate-600'
                     }`}
                   >
                     <ImageIcon className="w-4 h-4" />
