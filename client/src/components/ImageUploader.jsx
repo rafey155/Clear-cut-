@@ -10,64 +10,8 @@ const ImageUploader = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedBgColor, setSelectedBgColor] = useState('transparent');
   const [customBgImage, setCustomBgImage] = useState(null);
-  const [mergedImage, setMergedImage] = useState(null);
-
-  useEffect(() => {
-    if (!processedImage) {
-      setMergedImage(null);
-      return;
-    }
-
-    const generateMergedImage = async () => {
-      if (selectedBgColor === 'transparent' && !customBgImage) {
-        setMergedImage(processedImage);
-        return;
-      }
-
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      const fgImg = new window.Image();
-      fgImg.crossOrigin = 'anonymous';
-      fgImg.src = processedImage;
-      
-      try {
-        await new Promise((resolve, reject) => {
-          fgImg.onload = resolve;
-          fgImg.onerror = reject;
-        });
-
-        canvas.width = fgImg.width;
-        canvas.height = fgImg.height;
-
-        if (customBgImage) {
-          const bgImg = new window.Image();
-          bgImg.crossOrigin = 'anonymous';
-          bgImg.src = customBgImage;
-          await new Promise((resolve, reject) => {
-            bgImg.onload = resolve;
-            bgImg.onerror = reject;
-          });
-          
-          const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
-          const x = (canvas.width / 2) - (bgImg.width / 2) * scale;
-          const y = (canvas.height / 2) - (bgImg.height / 2) * scale;
-          ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
-        } else if (selectedBgColor && selectedBgColor !== 'transparent') {
-          ctx.fillStyle = selectedBgColor;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-
-        ctx.drawImage(fgImg, 0, 0);
-        setMergedImage(canvas.toDataURL('image/png'));
-      } catch (err) {
-        console.error("Error generating merged image:", err);
-        setMergedImage(processedImage);
-      }
-    };
-
-    generateMergedImage();
-  }, [processedImage, selectedBgColor, customBgImage]);
+  const [isImageLoading, setIsImageLoading] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   const handleFileChange = (selectedFile) => {
     setError(null);
@@ -124,12 +68,16 @@ const ImageUploader = () => {
       });
 
       const data = await response.json();
+      console.log('API Response:', data);
+      console.log('Received processed image URL:', data.imageUrl);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to process image');
       }
 
-      setProcessedImage(data.processedUrl);
+      setProcessedImage(data.imageUrl);
+      setIsImageLoading(true);
+      setImageLoadError(false);
     } catch (err) {
       setError(err.message || 'An unexpected error occurred.');
     } finally {
@@ -138,10 +86,50 @@ const ImageUploader = () => {
   };
 
   const handleDownload = async () => {
-    const imageToDownload = mergedImage || processedImage;
-    if (!imageToDownload) return;
+    if (!processedImage) return;
     
     try {
+      let imageToDownload = processedImage;
+
+      // If there's a custom background or color, generate a merged image on canvas before download
+      if ((selectedBgColor && selectedBgColor !== 'transparent') || customBgImage) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const fgImg = new window.Image();
+        fgImg.crossOrigin = 'anonymous';
+        fgImg.src = processedImage + (processedImage.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+        
+        await new Promise((resolve, reject) => {
+          fgImg.onload = resolve;
+          fgImg.onerror = reject;
+        });
+
+        canvas.width = fgImg.width;
+        canvas.height = fgImg.height;
+
+        if (customBgImage) {
+          const bgImg = new window.Image();
+          bgImg.crossOrigin = 'anonymous';
+          bgImg.src = customBgImage;
+          await new Promise((resolve, reject) => {
+            bgImg.onload = resolve;
+            bgImg.onerror = reject;
+          });
+          
+          const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
+          const x = (canvas.width / 2) - (bgImg.width / 2) * scale;
+          const y = (canvas.height / 2) - (bgImg.height / 2) * scale;
+          ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
+        } else if (selectedBgColor && selectedBgColor !== 'transparent') {
+          ctx.fillStyle = selectedBgColor;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        ctx.drawImage(fgImg, 0, 0);
+        imageToDownload = canvas.toDataURL('image/png');
+      }
+      
       let url;
       let isDataUrl = imageToDownload.startsWith('data:');
       
@@ -164,6 +152,7 @@ const ImageUploader = () => {
       }
       document.body.removeChild(a);
     } catch (err) {
+      console.error("Download error:", err);
       setError('Failed to download image.');
     }
   };
@@ -175,7 +164,8 @@ const ImageUploader = () => {
     setError(null);
     setSelectedBgColor('transparent');
     setCustomBgImage(null);
-    setMergedImage(null);
+    setIsImageLoading(false);
+    setImageLoadError(false);
   };
 
   return (
@@ -282,14 +272,41 @@ const ImageUploader = () => {
                 )}
 
                 {isProcessing && (
-                  <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-4 transition-colors duration-300">
+                  <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-4 transition-colors duration-300 z-10">
                     <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    <p className="text-primary font-medium animate-pulse">Cutting out the background...</p>
+                    <p className="text-primary font-medium animate-pulse">Sending to server...</p>
+                  </div>
+                )}
+
+                {isImageLoading && !isProcessing && (
+                  <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-4 transition-colors duration-300 z-10">
+                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                    <p className="text-primary font-medium animate-pulse">Removing background (this may take a few seconds)...</p>
+                  </div>
+                )}
+
+                {imageLoadError && (
+                  <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center transition-colors duration-300 z-10">
+                    <p className="text-red-500 font-medium mb-2">Failed to load processed image.</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">The image might still be processing or the URL is invalid.</p>
                   </div>
                 )}
 
                 {processedImage && (
-                  <img src={mergedImage || processedImage} alt="Processed" className="max-w-full max-h-full object-contain animate-in fade-in duration-700" />
+                  <img 
+                    src={processedImage} 
+                    alt="Processed" 
+                    crossOrigin="anonymous"
+                    onLoad={() => setIsImageLoading(false)}
+                    onError={() => { setIsImageLoading(false); setImageLoadError(true); }}
+                    className="max-w-full max-h-full object-contain animate-in fade-in duration-700" 
+                    style={{
+                      backgroundColor: selectedBgColor !== 'transparent' ? selectedBgColor : 'transparent',
+                      backgroundImage: customBgImage ? `url(${customBgImage})` : 'none',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
+                    }}
+                  />
                 )}
               </div>
             </div>

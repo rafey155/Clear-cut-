@@ -4,6 +4,8 @@ import multer from 'multer';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import axios from 'axios';
+import FormData from 'form-data';
 import cloudinary from './config/cloudinary.js';
 
 dotenv.config();
@@ -41,44 +43,63 @@ app.post('/api/remove-background', upload.single('image'), async (req, res) => {
   }
 
   try {
-    // Credentials check is handled during server startup in config/cloudinary.js
+    const apiKey = process.env.REMOVE_BG_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Remove.bg API key is missing. Check server configuration.' });
+    }
 
-    // Upload to Cloudinary directly from memory buffer
-    // Note: The Cloudinary AI Background Removal add-on must be enabled in your Cloudinary account.
+    // Step 1: Remove Background using Remove.bg API
+    const formData = new FormData();
+    formData.append('size', 'auto');
+    formData.append('image_file', req.file.buffer, {
+      filename: req.file.originalname || 'image.png',
+      contentType: req.file.mimetype
+    });
+
+    let removeBgResponse;
+    try {
+      removeBgResponse = await axios.post('https://api.remove.bg/v1.0/removebg', formData, {
+        headers: {
+          ...formData.getHeaders(),
+          'X-Api-Key': apiKey,
+        },
+        responseType: 'arraybuffer', // Receive binary data
+      });
+    } catch (apiError) {
+      console.error('Remove.bg API error:', apiError.response?.data?.toString() || apiError.message);
+      return res.status(502).json({ error: 'Failed to process image with Remove.bg API.' });
+    }
+
+    const processedBuffer = Buffer.from(removeBgResponse.data);
+
+    // Step 2: Upload Processed Image to Cloudinary for storage
     const uploadStream = () => {
       return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           {
-            background_removal: "cloudinary_ai",
-            resource_type: 'image'
+            folder: "clear-cut",
+            format: "png",
           },
           (error, result) => {
             if (error) reject(error);
             else resolve(result);
           }
         );
-        stream.end(req.file.buffer);
+        stream.end(processedBuffer);
       });
     };
 
-    const result = await uploadStream();
+    let result;
+    try {
+      result = await uploadStream();
+    } catch (uploadError) {
+      console.error('Cloudinary upload error:', uploadError);
+      return res.status(502).json({ error: 'Cloudinary failed to store processed image. Please try again.' });
+    }
 
-    // We must wait for the background removal to complete since it's processed asynchronously by Cloudinary in some cases.
-    // However, for immediate response, using remove.bg API or similar might be more direct if Cloudinary's async processing takes too long.
-    // Assuming synchronous response for the sake of the example:
-    
-    // Cloudinary returns the original image URL immediately, and a notification when background removal is done. 
-    // To get the transparent image URL immediately, we can use the `e_background_removal` transformation.
-    const processedImageUrl = cloudinary.url(result.public_id, {
-      secure: true,
-      effect: "background_removal",
-      format: "png"
-    });
-
+    // Step 3: Return the Cloudinary URL to the frontend
     res.json({
-      originalUrl: result.secure_url,
-      processedUrl: processedImageUrl,
-      message: 'Background removal initiated. It might take a few seconds to process completely on Cloudinary.'
+      imageUrl: result.secure_url
     });
 
   } catch (error) {
